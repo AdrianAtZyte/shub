@@ -1,4 +1,3 @@
-import setuptools  # noqa: F401
 import contextlib
 import datetime
 import errno
@@ -19,24 +18,9 @@ from tempfile import NamedTemporaryFile, TemporaryFile
 from urllib.parse import urljoin
 
 import click
-import pip
 import requests
 import yaml
 from click import ParamType
-
-# https://github.com/scrapinghub/shub/pull/309#pullrequestreview-113977920
-try:
-    from pip import main as pip_main
-except:  # noqa
-    try:
-        # For pip v20: https://tinyurl.com/pip20-error
-        from pip._internal.cli.main import pip_main
-    except ImportError:
-        try:
-            # For pip v9 and v10: https://tinyurl.com/y8mvl8rb
-            from pip._internal.main import main as pip_main
-        except ImportError:
-            from pip._internal import main as pip_main
 
 from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
 
@@ -321,7 +305,25 @@ def run_python(cmd, *args, **kwargs):
         return run_cmd([sys.executable] + cmd, *args, **kwargs)
 
 
+def _pip_main(args):
+    # https://github.com/scrapinghub/shub/pull/309#pullrequestreview-113977920
+    try:
+        from pip import main as pip_main
+    except:  # noqa
+        try:
+            # For pip v20: https://tinyurl.com/pip20-error
+            from pip._internal.cli.main import pip_main
+        except ImportError:
+            try:
+                # For pip v9 and v10: https://tinyurl.com/y8mvl8rb
+                from pip._internal.main import main as pip_main
+            except ImportError:
+                from pip._internal import main as pip_main
+    return pip_main(args)
+
+
 def decompress_egg_files(directory=None):
+    import pip
     try:
         EXTS = pip.utils.ARCHIVE_EXTENSIONS
     except AttributeError:
@@ -643,6 +645,7 @@ def update_available(silent_fail=True):
 def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
     if (not pkg and not reqfile) or (pkg and reqfile):
         raise ValueError('Call with either pkg or reqfile')
+    import pip
     extra_args = extra_args or []
     pip_version = Version(getattr(pip, '__version__', '1.0'))
     cmd = 'install'
@@ -655,8 +658,8 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
     if pip_version >= Version('8'):
         cmd = 'download'
     with patch_sys_executable():
-        pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
-                 target)
+        _pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
+                  target)
 
 
 @contextlib.contextmanager

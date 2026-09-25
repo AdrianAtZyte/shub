@@ -337,9 +337,11 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         with self.assertRaises(MockException):
             utils.update_available(silent_fail=False)
 
-    @patch('shub.utils.pip_main', autospec=True)
-    @patch('shub.utils.pip', autospec=True)
-    def test_download_from_pypi(self, mock_pip, mock_pip_main):
+    @patch.dict(sys.modules, pip=Mock(spec=[]))
+    @patch('shub.utils._pip_main', autospec=True)
+    def test_download_from_pypi(self, mock_pip_main):
+        mock_pip = sys.modules['pip']
+
         def _call(*args, **kwargs):
             utils.download_from_pypi(*args, **kwargs)
             return mock_pip_main.call_args[0][0]
@@ -351,7 +353,6 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertFalse(mock_pip_main.called)
 
         # 1.0 (Ubuntu Precise)
-        del mock_pip.__version__
         pipargs = _call('tmpdir', pkg='shub')
         self.assertNotIn('--no-use-wheel', pipargs)
 
