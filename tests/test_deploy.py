@@ -441,6 +441,24 @@ class DeployFilesTest(unittest.TestCase):
                 'Please lock your Pipfile before deploying',
             )
 
+    @patch('shub.deploy.shutil.which', return_value=None)
+    def test_pipenv_missing(self, mock_which):
+        with self.runner.isolated_filesystem():
+            with open('./main.egg', 'w') as f:
+                f.write('main content')
+            with open('./1.egg', 'w') as f:
+                f.write('1.egg content')
+            with open('./2.egg', 'w') as f:
+                f.write('2.egg content')
+
+            with self.assertRaises(NotFoundException) as cm:
+                self._deploy(req='Pipfile')
+
+            self.assertEqual(
+                cm.exception.message,
+                'You need pipenv installed to deploy with Pipfile',
+            )
+
     @patch("subprocess.check_output")
     def test_poetry_2_or_higher(self, mock_check_output):
         if not POETRY_VERSION or POETRY_VERSION < parse("2"):
