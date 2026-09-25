@@ -15,7 +15,7 @@ Changes
     behavior of deploying the working directory as-is.
 
 2.18.1 (2026-07-08)
-==========
+===================
 
 -   ``shub.config.load_shub_config()`` now also reads ``SHUB_APIKEY`` from the
     nearest ``.env`` file, not just the ``shub`` CLI. Previously this only
