@@ -169,40 +169,6 @@ def _is_deploy_successful(last_logs):
         pass
 
 
-@contextlib.contextmanager
-def patch_sys_executable():
-    """
-    Context manager that monkey-patches sys.executable to point to the Python
-    interpreter.
-
-    Some scripts, in particular pip, depend on sys.executable pointing to the
-    Python interpreter. When frozen, however, sys.executable points to the
-    stand-alone file (i.e. the frozen script).
-    """
-    if getattr(sys, 'frozen', False):
-        orig_exe = sys.executable
-        py_exe = find_exe('python')
-        # PyInstaller sets this environment variable in its bootloader. Remove
-        # it so the system-wide Python installation uses its own library path
-        # (this is particularly important if the system Python version differs
-        # from the Python version that the binary was compiled with)
-        orig_lib_path = os.environ.pop('LD_LIBRARY_PATH', None)
-        sys.executable = py_exe
-        yield
-        sys.executable = orig_exe
-        if orig_lib_path:
-            os.environ['LD_LIBRARY_PATH'] = orig_lib_path
-    else:
-        yield
-
-
-def find_exe(exe_name):
-    exe = which(exe_name)
-    if not exe:
-        raise NotFoundException(f"Please install {exe_name}")
-    return exe
-
-
 def run_cmd(*args, **kwargs):
     """Run a command and return its output, decoded by the stdout encoding and
     stripped of trailing newlines. `args` and `kwargs` are forwarded to
@@ -301,8 +267,7 @@ def run_python(cmd, *args, **kwargs):
     Call Python interpreter with supplied list of arguments and return its
     output. `args` and `kwargs` are forwarded to `subprocess.check_output`.
     """
-    with patch_sys_executable():
-        return run_cmd([sys.executable] + cmd, *args, **kwargs)
+    return run_cmd([sys.executable] + cmd, *args, **kwargs)
 
 
 def _pip_main(args):
@@ -657,9 +622,7 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
         no_wheel = ['--no-binary=:all:']
     if pip_version >= Version('8'):
         cmd = 'download'
-    with patch_sys_executable():
-        _pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
-                  target)
+    _pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args + target)
 
 
 @contextlib.contextmanager

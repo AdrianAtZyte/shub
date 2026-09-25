@@ -29,30 +29,6 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
 
-    @patch('shub.utils.sys.frozen', new=True, create=True)
-    @patch('shub.utils.find_exe', return_value='/my/python')
-    def test_patch_sys_executable(self, mock_find_exe):
-        original_exe = sys.executable
-        with patch('shub.utils.sys.frozen', new=False):
-            with utils.patch_sys_executable():
-                self.assertEqual(sys.executable, original_exe)
-        with utils.patch_sys_executable():
-            self.assertEqual(sys.executable, '/my/python')
-        # Make sure we properly cleaned up after ourselves
-        self.assertEqual(sys.executable, original_exe)
-        mock_find_exe.side_effect = NotFoundException
-        with self.assertRaises(NotFoundException):
-            with utils.patch_sys_executable():
-                pass
-
-    @patch('shub.utils.which')
-    def test_find_exe(self, mock_fe):
-        mock_fe.return_value = '/usr/bin/python'
-        self.assertEqual(utils.find_exe('python'), '/usr/bin/python')
-        mock_fe.return_value = None
-        with self.assertRaises(NotFoundException):
-            utils.find_exe('python')
-
     def test_run_cmd_captures_stderr(self):
         cmd = [
             'python', '-c',
