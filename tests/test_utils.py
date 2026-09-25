@@ -5,6 +5,7 @@ import sys
 import unittest
 import textwrap
 import time
+import zipfile
 from io import StringIO
 from unittest.mock import Mock, MagicMock, patch
 
@@ -313,20 +314,30 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         with self.assertRaises(MockException):
             utils.update_available(silent_fail=False)
 
+    def test_decompress_egg_files(self):
+        with self.runner.isolated_filesystem():
+            with zipfile.ZipFile('pkg.zip', 'w') as zf:
+                zf.writestr('pkg-1.0/setup.py', 'foo')
+            utils.decompress_egg_files()
+            with open(os.path.join('pkg', 'setup.py')) as f:
+                self.assertEqual(f.read(), 'foo')
+
     @patch.dict(sys.modules, pip=Mock(spec=[]))
-    @patch('shub.utils._pip_main', autospec=True)
-    def test_download_from_pypi(self, mock_pip_main):
+    @patch('shub.utils.subprocess.call', autospec=True)
+    def test_download_from_pypi(self, mock_call):
         mock_pip = sys.modules['pip']
 
         def _call(*args, **kwargs):
             utils.download_from_pypi(*args, **kwargs)
-            return mock_pip_main.call_args[0][0]
+            cmd = mock_call.call_args[0][0]
+            self.assertEqual(cmd[:3], [sys.executable, '-m', 'pip'])
+            return cmd[3:]
 
         with self.assertRaises(ValueError):
             utils.download_from_pypi('tmpdir')
         with self.assertRaises(ValueError):
             utils.download_from_pypi('tmpdir', pkg='shub', reqfile='req.txt')
-        self.assertFalse(mock_pip_main.called)
+        self.assertFalse(mock_call.called)
 
         # 1.0 (Ubuntu Precise)
         pipargs = _call('tmpdir', pkg='shub')

@@ -270,23 +270,6 @@ def run_python(cmd, *args, **kwargs):
     return run_cmd([sys.executable] + cmd, *args, **kwargs)
 
 
-def _pip_main(args):
-    # https://github.com/scrapinghub/shub/pull/309#pullrequestreview-113977920
-    try:
-        from pip import main as pip_main
-    except:  # noqa
-        try:
-            # For pip v20: https://tinyurl.com/pip20-error
-            from pip._internal.cli.main import pip_main
-        except ImportError:
-            try:
-                # For pip v9 and v10: https://tinyurl.com/y8mvl8rb
-                from pip._internal.main import main as pip_main
-            except ImportError:
-                from pip._internal import main as pip_main
-    return pip_main(args)
-
-
 def decompress_egg_files(directory=None):
     import pip
     try:
@@ -622,7 +605,8 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
         no_wheel = ['--no-binary=:all:']
     if pip_version >= Version('8'):
         cmd = 'download'
-    _pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args + target)
+    subprocess.call([sys.executable, '-m', 'pip', cmd, '-d', dest, '--no-deps']
+                    + no_wheel + extra_args + target)
 
 
 @contextlib.contextmanager
